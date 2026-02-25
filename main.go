@@ -3,9 +3,16 @@ package main
 import (
 	"log"
 	"net/http"
+	"github.com/DavidMWeaver4/Chirpy"
 )
+import _ "github.com/lib/pq"
 
 func main() {
+	//database and env load
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+
 	const port = "8080"
 	const filepathRoot = "."
 	apiCfg := apiConfig{}
