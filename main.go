@@ -3,7 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
-	//"github.com/DavidMWeaver4/Chirpy"
+	"os"
+	"database/sql"
+	"github.com/DavidMWeaver4/Chirpy/internal/database"
+	"github.com/joho/godotenv"
 )
 import _ "github.com/lib/pq"
 
@@ -12,6 +15,10 @@ func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
+	database.New(db)
+	if err != nil{
+		log.Fatal(err)
+	}
 
 	const port = "8080"
 	const filepathRoot = "."
