@@ -14,4 +14,5 @@ SELECT * FROM chirps
 WHERE id = $1;
 
 -- name: GetChirps :many
-SELECT id FROM users;
+SELECT * FROM chirps
+ORDER BY created_at ASC;
