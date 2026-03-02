@@ -2,11 +2,16 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"log"
 )
 
-func respondWithError(w http.ResponseWriter, code int, msg string){
+func respondWithError(w http.ResponseWriter, code int, msg string, err error){
+	if err != nil{
+		log.Println(err)
+	}
 	respondWithJSON(w, code, map[string]string{"error": msg})
 }
+
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}){
 	dat, err := json.Marshal(payload)
 	if err != nil{
