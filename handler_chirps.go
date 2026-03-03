@@ -56,9 +56,8 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
 		Body:      chirp.Body,
-		UserId:    chirp.UserID,
+		UserID:    chirp.UserID,
 	})
-	return
 
 }
 
@@ -78,7 +77,7 @@ func validate_words(wordstoCheck []string) []string {
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
-		respondWithError(w, 500, "Failed to get chirps from database", err)
+		respondWithError(w, 404, "Failed to get chirps from database", err)
 		return
 	}
 	var response []Chirp
@@ -88,8 +87,29 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
 			Body:      chirp.Body,
-			UserId:    chirp.UserID,
+			UserID:    chirp.UserID,
 		})
 	}
 	respondWithJSON(w, 200, response)
+}
+
+func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request) {
+	idString := r.PathValue("chirpID")
+	idS, err := uuid.Parse(idString)
+	if err != nil {
+		respondWithError(w, 400, "No chirpID given", err)
+		return
+	}
+	chirp, err := cfg.db.GetChirp(r.Context(), idS)
+	if err != nil {
+		respondWithError(w, 404, "Failed to get chirp from database", err)
+		return
+	}
+	respondWithJSON(w, 200, Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	})
 }
