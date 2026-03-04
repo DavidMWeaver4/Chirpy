@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DavidMWeaver4/Chirpy/internal/auth"
 	"github.com/DavidMWeaver4/Chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -13,8 +14,7 @@ import (
 func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 	const maxChirpLength = 140
 	type params struct {
-		Body   string `json:"body"`
-		UserID string `json:"user_id"`
+		Body string `json:"body"`
 	}
 	//decode and check if valid
 	decoder := json.NewDecoder(r.Body)
@@ -32,18 +32,24 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 	words := strings.Split(param.Body, " ")
 	param.Body = strings.Join(validate_words(words), " ")
 
-	//create and save to database
-	params_user_id, err := uuid.Parse(param.UserID)
+	//validations
+	bearerToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, 400, "Invalid user_id", err)
+		respondWithError(w, 401, "Unauthorized", err)
 		return
 	}
+	validated, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, 401, "Unauthorized", err)
+		return
+	}
+	//save to db
 	dbParams := database.CreateChirpParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Body:      param.Body,
-		UserID:    params_user_id,
+		UserID:    validated,
 	}
 	chirp, err := cfg.db.CreateChirp(r.Context(), dbParams)
 	if err != nil {

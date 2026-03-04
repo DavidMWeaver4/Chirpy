@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/DavidMWeaver4/Chirpy/internal/auth"
 )
@@ -10,8 +11,9 @@ import (
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
+		Password         string `json:"password"`
+		Email            string `json:"email"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 	//decode request body
 
@@ -38,12 +40,28 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if !isValid {
 		respondWithError(w, 401, "Incorrect email or password", nil)
 		return
-	} else {
-		respondWithJSON(w, 200, User{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
-		})
 	}
+	//get expires in seconds values or set default
+	expiresIn := time.Hour
+	if params.ExpiresInSeconds != 0 {
+		requestedDuration := time.Duration(params.ExpiresInSeconds) * time.Second
+		if requestedDuration < expiresIn {
+			expiresIn = requestedDuration
+		}
+	}
+	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expiresIn)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT", err)
+		return
+	}
+
+	//final response
+	respondWithJSON(w, 200, User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+		Token:     token,
+	})
+
 }

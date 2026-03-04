@@ -17,20 +17,19 @@ func main() {
 	godotenv.Load()
 	platf := os.Getenv("PLATFORM")
 	db_url := os.Getenv("DB_URL")
+	secr := os.Getenv("SECRET")
 	db, err := sql.Open("postgres", db_url)
 	if err != nil {
 		log.Fatal(err)
 	}
 	data := database.New(db)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	const port = "8080"
 	const filepathRoot = "."
 	apiCfg := apiConfig{
-		db:       data,
-		platform: platf,
+		db:        data,
+		platform:  platf,
+		jwtSecret: secr,
 	}
 
 	mux := http.NewServeMux()
