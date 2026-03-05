@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/DavidMWeaver4/Chirpy/internal/auth"
+	"github.com/DavidMWeaver4/Chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 	//decode request body
 
@@ -27,7 +27,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	//get user
 	user, err := cfg.db.GetUserFromEmail(r.Context(), params.Email)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve password", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve user", err)
 		return
 	}
 	//check password
@@ -41,27 +41,33 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 401, "Incorrect email or password", nil)
 		return
 	}
-	//get expires in seconds values or set default
-	expiresIn := time.Hour
-	if params.ExpiresInSeconds != 0 {
-		requestedDuration := time.Duration(params.ExpiresInSeconds) * time.Second
-		if requestedDuration < expiresIn {
-			expiresIn = requestedDuration
-		}
-	}
-	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expiresIn)
+	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT", err)
 		return
 	}
 
+	refreshedTokenString := auth.MakeRefreshToken()
+	refresh_token, err := cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshedTokenString,
+		ExpiresAt: time.Now().UTC().Add(60 * 24 * time.Hour),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create refresh token", err)
+		return
+	}
+
 	//final response
 	respondWithJSON(w, 200, User{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refresh_token.Token,
 	})
 
 }

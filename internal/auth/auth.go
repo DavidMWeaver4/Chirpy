@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,10 +25,10 @@ func CheckPasswordHash(password, hash string) (bool, error) {
 	}
 	return match, nil
 }
-  
-func GetBearerToken(headers http.Header)(string, error){
-	authHeader := headers .Get("Authorization")
-	if authHeader == ""{
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
 		return "", fmt.Errorf("Missing authorization token")
 	}
 
@@ -36,4 +38,12 @@ func GetBearerToken(headers http.Header)(string, error){
 	}
 
 	return strings.TrimSpace(parts[1]), nil
+}
+
+func MakeRefreshToken() string {
+	token := make([]byte, 32)
+	rand.Read(token)
+	string_token := hex.EncodeToString(token)
+
+	return string_token
 }
