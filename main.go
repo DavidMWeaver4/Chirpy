@@ -18,6 +18,7 @@ func main() {
 	platf := os.Getenv("PLATFORM")
 	db_url := os.Getenv("DB_URL")
 	secr := os.Getenv("SECRET")
+	polkaKey := os.Getenv("POLKA_KEY")
 	db, err := sql.Open("postgres", db_url)
 	if err != nil {
 		log.Fatal(err)
@@ -30,6 +31,7 @@ func main() {
 		db:        data,
 		platform:  platf,
 		jwtSecret: secr,
+		PolkaKey:  polkaKey,
 	}
 
 	mux := http.NewServeMux()
@@ -45,6 +47,8 @@ func main() {
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
 	mux.HandleFunc("PUT /api/users", apiCfg.handlerUsersAuth)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDelChirps)
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handleSetChripyRed)
 
 	srv := http.Server{
 		Addr:    ":" + port,

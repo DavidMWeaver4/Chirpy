@@ -47,3 +47,17 @@ func MakeRefreshToken() string {
 
 	return string_token
 }
+
+func GetAPIKey (headers http.Header)(string, error){
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", fmt.Errorf("Missing authorization token")
+	}
+
+	parts := strings.Fields(authHeader)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "ApiKey") {
+		return "", fmt.Errorf("authorization header must be in format 'ApiKey {token}'")
+	}
+
+	return strings.TrimSpace(parts[1]), nil
+}
