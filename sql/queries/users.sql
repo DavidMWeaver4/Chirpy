@@ -25,3 +25,9 @@ SELECT id FROM users;
 -- name: GetUserFromEmail :one
 SELECT * FROM users
 WHERE email = $1;
+
+-- name: ChangeUsersEmailAndPassword :exec
+UPDATE users
+SET email = $1,
+hashed_password =  $2
+WHERE id = $3;

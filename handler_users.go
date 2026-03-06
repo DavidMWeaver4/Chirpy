@@ -54,3 +54,60 @@ func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
 		Email:     user.Email,
 	})
 }
+
+func (cfg *apiConfig) handlerUsersAuth(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	//decode
+	decoder := json.NewDecoder(r.Body)
+	var params parameters
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
+		return
+	}
+	//get access token
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find token", err)
+		return
+	}
+	//get the User's ID
+	userID, err := auth.ValidateJWT(accessToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get user", err)
+		return
+	}
+	//hash the new password
+	hashed_password, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, 401, "Error hashing passsword", err)
+		return
+	}
+	//store to DB
+	err = cfg.db.ChangeUsersEmailAndPassword(r.Context(), database.ChangeUsersEmailAndPasswordParams{
+		Email:          params.Email,
+		HashedPassword: hashed_password,
+		ID:             userID,
+	})
+	if err != nil {
+		respondWithError(w, 401, "Error changing password", err)
+		return
+	}
+	//grab user
+	user, err := cfg.db.GetUser(r.Context(), userID)
+	if err != nil {
+		respondWithError(w, 401, "Error fetching user", err)
+		return
+	}
+	//sucess response
+	respondWithJSON(w, 200, User{
+		ID:        userID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: time.Now().UTC(),
+		Email:     params.Email,
+	})
+
+}
