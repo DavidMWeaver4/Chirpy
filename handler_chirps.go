@@ -81,22 +81,47 @@ func validate_words(wordstoCheck []string) []string {
 }
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps(r.Context())
-	if err != nil {
-		respondWithError(w, 404, "Failed to get chirps from database", err)
-		return
+	idString := r.URL.Query().Get("author_id")
+	if idString != "" {
+		idS, err := uuid.Parse(idString)
+		if err != nil {
+			respondWithError(w, 400, "Error parsing authorID", err)
+			return
+		}
+		chirps, err := cfg.db.GetChirpsByAuthor(r.Context(), idS)
+		if err != nil {
+			respondWithError(w, 404, "Failed to get chirp from database", err)
+			return
+		}
+		var response []Chirp
+		for _, chir := range chirps {
+			response = append(response, Chirp{
+				ID:        chir.ID,
+				CreatedAt: chir.CreatedAt,
+				UpdatedAt: chir.UpdatedAt,
+				Body:      chir.Body,
+				UserID:    chir.UserID,
+			})
+		}
+		respondWithJSON(w, 200, response)
+	} else {
+		chirps, err := cfg.db.GetChirps(r.Context())
+		if err != nil {
+			respondWithError(w, 404, "Failed to get chirps from database", err)
+			return
+		}
+		var response []Chirp
+		for _, chirp := range chirps {
+			response = append(response, Chirp{
+				ID:        chirp.ID,
+				CreatedAt: chirp.CreatedAt,
+				UpdatedAt: chirp.UpdatedAt,
+				Body:      chirp.Body,
+				UserID:    chirp.UserID,
+			})
+		}
+		respondWithJSON(w, 200, response)
 	}
-	var response []Chirp
-	for _, chirp := range chirps {
-		response = append(response, Chirp{
-			ID:        chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
-			Body:      chirp.Body,
-			UserID:    chirp.UserID,
-		})
-	}
-	respondWithJSON(w, 200, response)
 }
 
 func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request) {
